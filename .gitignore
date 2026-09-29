@@ -1,0 +1,14 @@
+# Personal data -- your LinkedIn export
+connections.csv
+
+# Local runtime state (regenerated automatically; contains your real
+# keywords, connections path, and an absolute local file path)
+config.json
+cache.json
+ai_insights.json
+
+# Local Claude Code session/tool state for this project
+.claude/
+
+# macOS
+.DS_Store
