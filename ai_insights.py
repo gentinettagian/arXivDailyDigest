@@ -28,6 +28,8 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from arxiv_core import REQUEST_HEADERS
+
 PREFERENCES_PATH = Path.home() / ".claude" / "preferences.md"
 
 # A LaunchAgent-launched process gets a minimal PATH that doesn't include
@@ -153,7 +155,7 @@ def _fetch_verification(arxiv_id, timeout=20):
     title-page metadata. Returns None if no HTML rendering is available
     (arXiv's HTML rendering is experimental and not every paper has one)."""
     url = f"https://arxiv.org/html/{arxiv_id}"
-    req = urllib.request.Request(url, headers={"User-Agent": "arxiv-scraper/1.0"})
+    req = urllib.request.Request(url, headers=REQUEST_HEADERS)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             page = resp.read().decode("utf-8", errors="replace")

@@ -28,6 +28,20 @@ EXPORT_API = "http://export.arxiv.org/api/query"
 ATOM_NS = "{http://www.w3.org/2005/Atom}"
 ABSTRACT_BATCH_SIZE = 150
 
+# A bare `User-Agent: arxiv-scraper/1.0` with no Accept/Accept-Language
+# headers looks like a bot to arXiv's front-end and can get a 406 Not
+# Acceptable -- enforcement seems to vary (possibly by network/region),
+# since it doesn't trigger for every client. Sending a realistic browser
+# header set avoids it.
+REQUEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
 DEFAULT_CATEGORIES = [
     "quant-ph",
     "cond-mat.str-el",
@@ -114,7 +128,7 @@ def _fetch_abstracts(arxiv_ids):
         batch = ids[i:i + ABSTRACT_BATCH_SIZE]
         params = {"id_list": ",".join(batch), "max_results": len(batch)}
         url = f"{EXPORT_API}?{urllib.parse.urlencode(params)}"
-        req = urllib.request.Request(url, headers={"User-Agent": "arxiv-scraper/1.0"})
+        req = urllib.request.Request(url, headers=REQUEST_HEADERS)
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = resp.read()
         root = ET.fromstring(data)
@@ -138,7 +152,7 @@ def fetch_recent_entries(categories, days):
 
     for cat in categories:
         url = f"{LISTING_BASE}/{cat}/recent?skip=0&show=2000"
-        req = urllib.request.Request(url, headers={"User-Agent": "arxiv-scraper/1.0"})
+        req = urllib.request.Request(url, headers=REQUEST_HEADERS)
         with urllib.request.urlopen(req, timeout=30) as resp:
             page = resp.read().decode("utf-8", errors="replace")
 
