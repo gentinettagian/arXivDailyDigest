@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>arXiv Daily Digest</title>
+<style>
+  :root {
+    --bg: #faf9f7; --panel: #fff; --border: #e4e0d8; --text: #22201c;
+    --muted: #6b6355; --accent: #a44b2e; --tag-bg: #f1ece2; --kw: #3f7d3f;
+    --suggest: #2b6cb0; --suggest-bg: #eaf1f9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    background: var(--bg); color: var(--text);
+    margin: 0; padding: 0 1.5rem 4rem;
+  }
+  header {
+    max-width: 860px; margin: 0 auto; padding: 2.5rem 0 1.2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap;
+  }
+  h1 { font-size: 1.8rem; margin: 0 0 .3rem; }
+  .meta { color: var(--muted); font-size: .9rem; font-family: -apple-system, sans-serif; }
+  .header-actions { display: flex; gap: .5rem; font-family: -apple-system, sans-serif; }
+  button {
+    font-family: -apple-system, sans-serif; font-size: .85rem; padding: .5rem 1rem;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--panel);
+    color: var(--text); cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button:disabled { opacity: .6; cursor: default; }
+  .controls {
+    max-width: 860px; margin: 1.2rem auto; display: flex; gap: .6rem;
+    flex-wrap: wrap; font-family: -apple-system, sans-serif;
+  }
+  input[type=text], input[type=number], textarea {
+    padding: .55rem .8rem; border: 1px solid var(--border);
+    border-radius: 6px; font-size: .95rem; background: var(--panel); color: var(--text);
+    font-family: -apple-system, sans-serif;
+  }
+  .controls input[type=text] { flex: 1; min-width: 200px; }
+  label.toggle {
+    display: flex; align-items: center; gap: .4rem; font-size: .9rem;
+    color: var(--muted); padding: .55rem .8rem; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--panel); cursor: pointer;
+  }
+  .count { font-family: -apple-system, sans-serif; color: var(--muted); font-size: .85rem;
+            max-width: 860px; margin: 0 auto .8rem; }
+  .paper {
+    max-width: 860px; margin: 0 auto 1.1rem; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 8px; padding: 1.1rem 1.3rem;
+  }
+  .paper.connection { border-left: 4px solid var(--accent); }
+  .paper h2 { font-size: 1.15rem; margin: 0 0 .35rem; line-height: 1.35; }
+  .paper h2 a { color: var(--text); text-decoration: none; }
+  .paper h2 a:hover { text-decoration: underline; }
+  .authors { color: var(--muted); font-size: .88rem; font-family: -apple-system, sans-serif; margin-bottom: .5rem; }
+  .summary { font-size: .95rem; line-height: 1.5; cursor: pointer; }
+  .summary.truncated {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+  }
+  .summary-hint {
+    font-family: -apple-system, sans-serif; font-size: .72rem; color: var(--muted);
+    margin-top: .3rem; cursor: pointer;
+  }
+  .tags { margin-top: .6rem; display: flex; gap: .4rem; flex-wrap: wrap; }
+  .tag {
+    font-family: -apple-system, sans-serif; font-size: .72rem; padding: .15rem .5rem;
+    border-radius: 999px; background: var(--tag-bg); color: var(--muted);
+  }
+  .tag.conn-tag { background: var(--accent); color: #fff; }
+  .tag.kw-tag { background: var(--kw); color: #fff; }
+  .empty { text-align: center; color: var(--muted); padding: 3rem 0; font-family: -apple-system, sans-serif; }
+  .offline-banner {
+    display: none; max-width: 860px; margin: 0 auto 1.2rem; padding: .8rem 1.1rem;
+    border: 1px solid var(--accent); border-radius: 8px; background: var(--tag-bg);
+    color: var(--text); font-family: -apple-system, sans-serif; font-size: .85rem;
+  }
+  details.settings {
+    max-width: 860px; margin: 0 auto 1.2rem; font-family: -apple-system, sans-serif;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--panel); padding: .9rem 1.2rem;
+  }
+  details.settings summary { cursor: pointer; font-size: .9rem; color: var(--muted); }
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin-top: .9rem; }
+  .settings-grid > div { display: flex; flex-direction: column; gap: .3rem; }
+  .settings-grid label { font-size: .8rem; color: var(--muted); }
+  .settings-grid textarea { min-height: 5.5rem; resize: vertical; }
+  .settings-full { grid-column: 1 / -1; }
+  .save-row { margin-top: .8rem; display: flex; gap: .6rem; align-items: center; }
+  .save-status { font-size: .8rem; color: var(--muted); }
+  @media (max-width: 600px) { .settings-grid { grid-template-columns: 1fr; } }
+  .keyword-filters {
+    max-width: 860px; margin: 0 auto 1rem; display: flex; gap: .4rem; flex-wrap: wrap;
+    font-family: -apple-system, sans-serif;
+  }
+  .kw-filter-btn {
+    font-size: .78rem; padding: .3rem .75rem; border-radius: 999px;
+    border: 1px solid var(--kw); background: transparent; color: var(--kw); cursor: pointer;
+  }
+  .kw-filter-btn.active { background: var(--kw); color: #fff; }
+  .suggestions { max-width: 860px; margin: 0 auto 1.4rem; }
+  .suggestions-title {
+    font-size: 1rem; font-family: -apple-system, sans-serif; color: var(--suggest);
+    margin: 0 0 .6rem; display: flex; align-items: center; gap: .4rem;
+  }
+  .paper.suggested { border-left: 4px solid var(--suggest); background: var(--suggest-bg); }
+  .suggested-reason {
+    font-family: -apple-system, sans-serif; font-size: .85rem; color: var(--suggest);
+    margin-top: .5rem; font-style: italic;
+  }
+  .tag.suggest-tag { background: var(--suggest); color: #fff; }
+  .ai-status {
+    max-width: 860px; margin: 0 auto 1rem; font-family: -apple-system, sans-serif;
+    font-size: .82rem; color: var(--suggest);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1815; --panel: #24211d; --border: #3a352c; --text: #ece7dc; --muted: #a39a86; --tag-bg: #322d25;
+      --kw: #6fae6f; --suggest: #6ea8e0; --suggest-bg: #1c2a38;
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>arXiv Daily Digest</h1>
+    <div class="meta" id="metaLine">Loading...</div>
+  </div>
+  <div class="header-actions">
+    <button class="primary" id="refreshBtn">Refresh now</button>
+  </div>
+</header>
+
+<div class="ai-status" id="aiStatus" style="display:none;"></div>
+<div class="suggestions" id="suggestionsSection" style="display:none;">
+  <h2 class="suggestions-title">Claude's suggestions</h2>
+  <div id="suggestionsList"></div>
+</div>
+
+<div class="offline-banner" id="offlineBanner">
+  This page was opened directly as a file, so it can't reach the local server.
+  Double-click <strong>Start arXiv Digest.command</strong> in this folder instead --
+  it starts the server and opens this same page at <code>http://localhost:8765</code>,
+  where Refresh and Settings work.
+</div>
+
+<details class="settings" id="settingsPanel">
+  <summary>Settings</summary>
+  <div class="settings-grid">
+    <div class="settings-full">
+      <label for="cfgKeywords">Keywords (one per line, matched against title + abstract)</label>
+      <textarea id="cfgKeywords"></textarea>
+    </div>
+    <div class="settings-full">
+      <label for="cfgConnectionsPath">LinkedIn connections CSV path (optional)</label>
+      <input type="text" id="cfgConnectionsPath" placeholder="/path/to/Connections.csv">
+    </div>
+    <div>
+      <label for="cfgDays">Lookback (arXiv announcement days)</label>
+      <input type="number" id="cfgDays" min="1">
+    </div>
+    <div>
+      <label for="cfgMaxResults">Max results fetched</label>
+      <input type="number" id="cfgMaxResults" min="1" step="10">
+    </div>
+    <div class="settings-full">
+      <label for="cfgCategories">Categories (comma-separated)</label>
+      <input type="text" id="cfgCategories">
+    </div>
+  </div>
+  <div class="save-row">
+    <button id="saveSettingsBtn">Save settings</button>
+    <span class="save-status" id="saveStatus"></span>
+  </div>
+</details>
+
+<div class="keyword-filters" id="keywordFilters"></div>
+
+<div class="controls">
+  <input type="text" id="search" placeholder="Filter by word (title/abstract)...">
+  <label class="toggle"><input type="checkbox" id="connOnly"> Connections only</label>
+</div>
+<div class="count" id="count"></div>
+<div id="list"></div>
+<div class="empty" id="emptyMsg" style="display:none;">No papers match.</div>
+
+<script>
+const KEYWORD_FILTER_STORAGE_KEY = 'arxiv-digest-selected-keywords';
+
+function loadSelectedKeywordsFromStorage() {
+  try {
+    const raw = localStorage.getItem(KEYWORD_FILTER_STORAGE_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch (err) {
+    return new Set();
+  }
+}
+
+function saveSelectedKeywordsToStorage() {
+  try {
+    localStorage.setItem(KEYWORD_FILTER_STORAGE_KEY, JSON.stringify([...SELECTED_KEYWORDS]));
+  } catch (err) {
+    // ignore -- e.g. private browsing or storage blocked; filters just won't persist
+  }
+}
+
+let PAPERS = [];
+let AI_SUGGESTIONS = [];
+let ALL_KEYWORDS = [];
+let SELECTED_KEYWORDS = loadSelectedKeywordsFromStorage();
+const isFileProtocol = location.protocol === 'file:';
+
+const list = document.getElementById('list');
+const keywordFilters = document.getElementById('keywordFilters');
+const search = document.getElementById('search');
+const connOnly = document.getElementById('connOnly');
+const countEl = document.getElementById('count');
+const emptyMsg = document.getElementById('emptyMsg');
+const metaLine = document.getElementById('metaLine');
+const refreshBtn = document.getElementById('refreshBtn');
+const saveStatus = document.getElementById('saveStatus');
+const offlineBanner = document.getElementById('offlineBanner');
+const aiStatus = document.getElementById('aiStatus');
+const suggestionsSection = document.getElementById('suggestionsSection');
+const suggestionsList = document.getElementById('suggestionsList');
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function toggleSummary(el) {
+  const summaryEl = el.classList.contains('summary') ? el : el.previousElementSibling;
+  const hintEl = summaryEl.nextElementSibling;
+  const truncated = summaryEl.classList.toggle('truncated');
+  hintEl.textContent = truncated ? 'click to expand' : 'click to collapse';
+}
+
+function paperCardHtml(p, opts) {
+  opts = opts || {};
+  return `
+    <div class="paper ${p.is_connection ? 'connection' : ''} ${opts.suggested ? 'suggested' : ''}">
+      <h2><a href="${p.link}" target="_blank" rel="noopener">${escapeHtml(p.title)}</a></h2>
+      <div class="authors">${escapeHtml(p.authors.join(', '))}</div>
+      <div class="summary truncated" onclick="toggleSummary(this)">${escapeHtml(p.summary)}</div>
+      <div class="summary-hint" onclick="toggleSummary(this)">click to expand</div>
+      ${opts.reason ? `<div class="suggested-reason">${escapeHtml(opts.reason)}</div>` : ''}
+      <div class="tags">
+        ${opts.suggested ? '<span class="tag suggest-tag">Claude pick</span>' : ''}
+        ${p.is_connection ? '<span class="tag conn-tag">connection</span>' : ''}
+        ${(p.matched_keywords || []).map(k => `<span class="tag kw-tag">${escapeHtml(k)}</span>`).join('')}
+        ${p.categories.map(c => `<span class="tag">${escapeHtml(c)}</span>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function render() {
+  const q = search.value.trim().toLowerCase();
+  const onlyConn = connOnly.checked;
+  const filtered = PAPERS.filter(p => {
+    if (onlyConn && !p.is_connection) return false;
+    if (SELECTED_KEYWORDS.size > 0 && !(p.matched_keywords || []).some(k => SELECTED_KEYWORDS.has(k))) return false;
+    if (!q) return true;
+    return (p.title + ' ' + p.summary).toLowerCase().includes(q);
+  });
+  countEl.textContent = filtered.length + ' of ' + PAPERS.length + ' papers';
+  list.innerHTML = filtered.map(p => paperCardHtml(p)).join('');
+  if (filtered.length) {
+    emptyMsg.style.display = 'none';
+  } else {
+    emptyMsg.innerHTML = PAPERS.length ? 'No papers match your current search/filter selection.' : SERVER_EMPTY_MESSAGE;
+    emptyMsg.style.display = 'block';
+  }
+}
+
+function renderKeywordFilters() {
+  keywordFilters.innerHTML = ALL_KEYWORDS.map(k => `
+    <button class="kw-filter-btn ${SELECTED_KEYWORDS.has(k) ? 'active' : ''}" data-kw="${escapeHtml(k)}">${escapeHtml(k)}</button>
+  `).join('');
+}
+
+keywordFilters.addEventListener('click', (e) => {
+  const btn = e.target.closest('.kw-filter-btn');
+  if (!btn) return;
+  const kw = btn.dataset.kw;
+  if (SELECTED_KEYWORDS.has(kw)) SELECTED_KEYWORDS.delete(kw); else SELECTED_KEYWORDS.add(kw);
+  saveSelectedKeywordsToStorage();
+  renderKeywordFilters();
+  render();
+});
+
+function renderSuggestions() {
+  const cards = AI_SUGGESTIONS.map(s => {
+    const paper = PAPERS.find(p => p.link === s.id);
+    return paper ? paperCardHtml(paper, { suggested: true, reason: s.reason }) : '';
+  }).filter(Boolean).join('');
+  suggestionsList.innerHTML = cards;
+  suggestionsSection.style.display = cards ? 'block' : 'none';
+}
+
+function formatAnnouncementDate(dateStr) {
+  if (!dateStr) return 'unknown';
+  const d = new Date(dateStr + 'T00:00:00');
+  return isNaN(d) ? dateStr : d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+let SERVER_EMPTY_MESSAGE = 'No papers fetched yet -- click Refresh.';
+
+function setMeta(data) {
+  const kwDisplay = data.keywords && data.keywords.length ? data.keywords.join(', ') : '(none set)';
+  const connNote = data.connections_loaded ? `${data.connections_loaded} connections loaded` : 'no connections file loaded';
+  const when = data.generated_at || 'never';
+  metaLine.textContent = `Last refreshed ${when} · keywords: ${kwDisplay} · ${connNote}`;
+
+  if (data.total_fetched && !data.within_lookback) {
+    SERVER_EMPTY_MESSAGE = `No papers announced within the last ${data.days} arXiv announcement day(s) yet. `
+      + `The most recent arXiv announcement day fetched is <strong>${formatAnnouncementDate(data.most_recent_published)}</strong> `
+      + `(arXiv doesn't announce anything over the weekend). `
+      + `Try increasing "Lookback (arXiv announcement days)" in Settings.`;
+  } else if (!data.total_fetched) {
+    SERVER_EMPTY_MESSAGE = 'No papers fetched yet -- click Refresh.';
+  }
+}
+
+async function loadCached() {
+  const res = await fetch('/api/papers');
+  const data = await res.json();
+  PAPERS = data.papers || [];
+  setMeta(data);
+  render();
+  renderSuggestions();
+}
+
+async function pollAiInsights() {
+  try {
+    const res = await fetch('/api/ai-insights');
+    const data = await res.json();
+    AI_SUGGESTIONS = data.suggestions || [];
+
+    if (data.status === 'running') {
+      aiStatus.style.display = 'block';
+      aiStatus.textContent = "Generating today's Claude suggestions... (verifies each candidate against the real paper, usually under 2 minutes)";
+      setTimeout(pollAiInsights, 5000);
+    } else if (data.status === 'error') {
+      aiStatus.style.display = 'block';
+      aiStatus.textContent = "Couldn't generate Claude suggestions today: " + (data.error || 'unknown error');
+    } else {
+      aiStatus.style.display = 'none';
+    }
+    renderSuggestions();
+  } catch (err) {
+    // non-critical enhancement -- fail silently, the rest of the page still works
+  }
+}
+
+async function loadConfig() {
+  const res = await fetch('/api/config');
+  const cfg = await res.json();
+  ALL_KEYWORDS = cfg.keywords || [];
+  let prunedSelection = false;
+  for (const k of [...SELECTED_KEYWORDS]) {
+    if (!ALL_KEYWORDS.includes(k)) {
+      SELECTED_KEYWORDS.delete(k);
+      prunedSelection = true;
+    }
+  }
+  if (prunedSelection) saveSelectedKeywordsToStorage();
+  document.getElementById('cfgKeywords').value = ALL_KEYWORDS.join('\n');
+  document.getElementById('cfgConnectionsPath').value = cfg.connections_path || '';
+  document.getElementById('cfgDays').value = cfg.days;
+  document.getElementById('cfgMaxResults').value = cfg.max_results;
+  document.getElementById('cfgCategories').value = cfg.categories || '';
+  renderKeywordFilters();
+  render();
+}
+
+async function saveSettings() {
+  const cfg = {
+    keywords: document.getElementById('cfgKeywords').value,
+    connections_path: document.getElementById('cfgConnectionsPath').value.trim(),
+    days: parseInt(document.getElementById('cfgDays').value, 10) || 1,
+    max_results: parseInt(document.getElementById('cfgMaxResults').value, 10) || 300,
+    categories: document.getElementById('cfgCategories').value.trim(),
+  };
+  saveStatus.textContent = 'Saving...';
+  await fetch('/api/config', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(cfg),
+  });
+  await loadConfig();
+  saveStatus.textContent = 'Saved. Click Refresh to apply.';
+  setTimeout(() => { saveStatus.textContent = ''; }, 3000);
+}
+
+async function refresh() {
+  refreshBtn.disabled = true;
+  refreshBtn.textContent = 'Fetching...';
+  try {
+    const res = await fetch('/api/refresh', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'refresh failed');
+    PAPERS = data.papers || [];
+    setMeta(data);
+    render();
+    renderSuggestions();
+  } catch (err) {
+    metaLine.textContent = 'Refresh failed: ' + err.message;
+  } finally {
+    refreshBtn.disabled = false;
+    refreshBtn.textContent = 'Refresh now';
+  }
+}
+
+search.addEventListener('input', render);
+connOnly.addEventListener('change', render);
+refreshBtn.addEventListener('click', refresh);
+document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+
+if (isFileProtocol) {
+  offlineBanner.style.display = 'block';
+  refreshBtn.disabled = true;
+  metaLine.textContent = 'Not connected to the local server.';
+} else {
+  loadConfig();
+  loadCached();
+  pollAiInsights();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+# One keyword or phrase per line (or comma-separated). Case-insensitive,
+# matched against title + abstract. Edit freely, or edit them straight from
+# the Settings panel in the app once it's running -- this file is only
+# used to seed that on the very first run.
+quantum computing
+machine learning
+neural network
+topological
